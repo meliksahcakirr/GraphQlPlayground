@@ -35,11 +35,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.LoadState
+import androidx.paging.PagingData
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.items
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.deliveryhero.graphqlplayground.R
 import com.deliveryhero.graphqlplayground.domain.LaunchItem
 import com.deliveryhero.graphqlplayground.ui.theme.GraphQlPlaygroundTheme
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 
 @Composable
@@ -72,11 +79,7 @@ fun MainActivityScreen(viewModel: MainViewModel = viewModel()) {
             backgroundColor = MaterialTheme.colors.background
         ) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                if (viewModel.uiState.loading) {
-                    CircularProgressIndicator()
-                } else {
-                    LaunchListView(viewModel.uiState.data)
-                }
+                LaunchListPaginationView(viewModel.uiState.paginationFlow)
             }
         }
     }
@@ -86,6 +89,56 @@ fun MainActivityScreen(viewModel: MainViewModel = viewModel()) {
 @Composable
 fun LaunchListViewEmpty() {
     LaunchListView(emptyList())
+}
+
+@Preview(showBackground = true)
+@Composable
+fun LaunchListPaginationView(
+    launchFlow: Flow<PagingData<LaunchItem>> = flowOf()
+) {
+    val launchListItems: LazyPagingItems<LaunchItem> = launchFlow.collectAsLazyPagingItems()
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            items(items = launchListItems) { item ->
+                item?.let {
+                    LaunchItemView(launchItem = it)
+                }
+            }
+            launchListItems.apply {
+                when {
+                    loadState.refresh is LoadState.Loading -> {
+                        item { CircularProgressIndicator() }
+                    }
+                    loadState.append is LoadState.Loading -> {
+                        item { CircularProgressIndicator() }
+                    }
+                    loadState.refresh is LoadState.Error -> {
+                        val e = loadState.refresh as LoadState.Error
+                        item {
+//                            ErrorItem(
+//                                message = e.error.localizedMessage!!,
+//                                modifier = Modifier.fillParentMaxSize(),
+//                                onClickRetry = { refresh() }
+//                            )
+                        }
+                    }
+                    loadState.append is LoadState.Error -> {
+                        val e = loadState.append as LoadState.Error
+                        item {
+//                            ErrorItem(
+//                                message = e.error.localizedMessage!!,
+//                                onClickRetry = { retry() }
+//                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Preview(showBackground = true)
